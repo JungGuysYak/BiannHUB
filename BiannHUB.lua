@@ -1,6 +1,5 @@
 --[[
-    BIANNHUB RECORDER v2 - FINAL (No Empty Space)
-    Fitur: Minimize collapse, Close total stop, layout rapat
+    BIANNHUB RECORDER v2
 ]]
 
 repeat task.wait() until game:IsLoaded()
