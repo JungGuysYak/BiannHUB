@@ -1,6 +1,5 @@
 --[[
-    BIANNHUB RECORDER v2 - FINAL (No Empty Space)
-    Fitur: Minimize collapse, Close total stop, layout rapat
+    BIANNHUB RECORDER v2
 ]]
 
 repeat task.wait() until game:IsLoaded()
@@ -1011,7 +1010,7 @@ local function createGUI()
     lp2.PaddingRight = UDim.new(0,6)
 
     mkDiv(388)
-    local mergeBtn = mkBtn(12,394,100,32,"🔗 MERGE & COMP",0,100,160)
+    local mergeBtn = mkBtn(12,394,100,32,"🔗 MERGE",0,100,160)
 
     notifLabel = Instance.new("TextLabel", contentContainer)
     notifLabel.BackgroundColor3 = Color3.fromRGB(0,80,150)
