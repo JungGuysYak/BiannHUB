@@ -1,5 +1,6 @@
 --[[
-    BIANNHUB RECORDER v2 
+    BIANNHUB RECORDER v2 - FINAL (No Empty Space)
+    Fitur: Minimize collapse, Close total stop, layout rapat
 ]]
 
 repeat task.wait() until game:IsLoaded()
@@ -53,7 +54,8 @@ local renderList = function() end
 local savedPosition = nil
 local recordingIndicator = nil
 local guiFrame = nil
-local guiVisible = true
+local isCollapsed = false
+local originalHeight = 470
 
 -- ==================== FUNGSI DASAR ====================
 local function getGroundLevel(pos)
@@ -104,7 +106,7 @@ local function notif(msg, color, duration)
     end)
 end
 
--- ==================== RECORDING ====================
+-- ==================== RECORDING (sama persis) ====================
 local function stopRecording()
     if not isRecording then
         notif("❌ Tidak sedang merekam", Color3.fromRGB(255,100,100))
@@ -214,7 +216,7 @@ local function createRecordingIndicator()
     blackBg.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
             if isRecording then stopRecording() end
-            if guiFrame then guiFrame.Visible = true; guiVisible = true end
+            if guiFrame then guiFrame.Visible = true end
         end
     end)
     
@@ -264,7 +266,7 @@ local function startRecording()
     recordStartTime = tick()
     isRecording = true
 
-    if guiFrame then guiFrame.Visible = false; guiVisible = false end
+    if guiFrame then guiFrame.Visible = false end
     showRecordingIndicator(true)
 
     local lastRecTick = tick()
@@ -404,7 +406,7 @@ local function refreshRecords()
     sortRecords(savedRecords)
 end
 
--- ==================== KOMPRESI (untuk playback) ====================
+-- ==================== KOMPRESI ====================
 local function getCompressedFrames(originalFrames)
     if not SKIP_IDLE then return originalFrames end
     
@@ -700,10 +702,7 @@ local function loadPosition()
     end
 end
 
--- ==================== MERGE TANPA JEDA (TANPA LOMPATAN) ====================
--- Hanya menggabungkan semua frame secara berurutan dan menyesuaikan waktu agar kontinu.
--- Tidak ada interpolasi posisi tambahan, tidak ada frame transisi buatan.
--- Hasilnya adalah lintasan asli dari masing-masing CP tanpa jeda diam di sambungan.
+-- ==================== MERGE TANPA JEDA ====================
 local function mergeAndCompressAll()
     local toMerge = {}
     for _, name in ipairs(savedRecords) do
@@ -733,11 +732,9 @@ local function mergeAndCompressAll()
         return
     end
 
-    -- Kumpulkan semua frame dari semua CP setelah trim idle di awal/akhir masing-masing CP
     local allRawFrames = {}
     for _, cpData in ipairs(cpDataList) do
         local frames = cpData.frames
-        -- Trim idle frames di awal/akhir berdasarkan kecepatan
         local startIdx, endIdx = 1, #frames
         for i = 1, #frames do
             local speed = math.sqrt(frames[i].velocity.x^2 + frames[i].velocity.z^2)
@@ -758,8 +755,6 @@ local function mergeAndCompressAll()
         return
     end
 
-    -- Buat ulang waktu berdasarkan jarak dan kecepatan antar frame berurutan (seperti kompresi)
-    -- Ini akan menghilangkan jeda diam karena waktu dihitung ulang secara dinamis.
     local mergedFrames = {}
     local currentTime = 0
     for i = 1, #allRawFrames do
@@ -777,7 +772,7 @@ local function mergeAndCompressAll()
             local v1 = Vector3.new(frame.velocity.x, frame.velocity.y, frame.velocity.z)
             local v2 = Vector3.new(nextFrame.velocity.x, nextFrame.velocity.y, nextFrame.velocity.z)
             local avgSpeed = (v1.Magnitude + v2.Magnitude) / 2
-            local delta = 0.016 -- default 60fps
+            local delta = 0.016
             if avgSpeed > 0.1 and dist > 0.01 then
                 delta = dist / avgSpeed
                 delta = math.max(delta, 0.016)
@@ -809,7 +804,43 @@ local function mergeAndCompressAll()
     end
 end
 
--- ==================== GUI DENGAN MINIMIZE & CLOSE ====================
+-- ==================== CLEANUP TOTAL ====================
+local function cleanupAll()
+    if isRecording then
+        isRecording = false
+        if recordHB then recordHB:Disconnect(); recordHB = nil end
+        showRecordingIndicator(false)
+        local hum = getHum()
+        if hum then hum.AutoRotate = true end
+    end
+    if isPlaying then
+        isPlaying = false
+        isPaused = false
+        if walkHB then walkHB:Disconnect(); walkHB = nil end
+        local hrp = getHRP()
+        local hum = getHum()
+        if hrp then
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+        end
+        if hum then
+            hum.AutoRotate = true
+            hum.WalkSpeed = originalWalkSpeed
+            hum.JumpPower = originalJumpPower
+            hum:ChangeState(Enum.HumanoidStateType.Running)
+        end
+    end
+    if recordingIndicator then
+        recordingIndicator:Destroy()
+        recordingIndicator = nil
+    end
+    local gui = LP.PlayerGui:FindFirstChild("BiannHUBRecorder")
+    if gui then gui:Destroy() end
+    guiFrame = nil
+    notifLabel = nil
+end
+
+-- ==================== GUI DENGAN LAYOUT RAPAT ====================
 local function createGUI()
     local old = LP.PlayerGui:FindFirstChild("BiannHUBRecorder")
     if old then old:Destroy() end
@@ -819,7 +850,9 @@ local function createGUI()
     gui.ResetOnSpawn = false
     gui.Parent = LP:WaitForChild("PlayerGui")
 
-    local W, H = 300, 540
+    local W, H = 300, 470  -- tinggi sudah pas tanpa space kosong
+    originalHeight = H
+    
     local frame = Instance.new("Frame", gui)
     frame.BackgroundColor3 = Color3.fromRGB(10,10,14)
     frame.BorderSizePixel = 0
@@ -836,6 +869,7 @@ local function createGUI()
     fs.Color = Color3.fromRGB(0,180,255)
     fs.Thickness = 1.5
 
+    -- Title bar
     local titleBar = Instance.new("Frame", frame)
     titleBar.BackgroundColor3 = Color3.fromRGB(0,120,180)
     titleBar.BorderSizePixel = 0
@@ -854,7 +888,7 @@ local function createGUI()
     titleLbl.TextSize = 13
     titleLbl.TextXAlignment = Enum.TextXAlignment.Left
 
-    -- Tombol Minimize (_)
+    -- Tombol Minimize
     local minBtn = Instance.new("TextButton", titleBar)
     minBtn.BackgroundColor3 = Color3.fromRGB(80,80,100)
     minBtn.BorderSizePixel = 0
@@ -867,13 +901,8 @@ local function createGUI()
     local minCorner = Instance.new("UICorner")
     minCorner.CornerRadius = UDim.new(0,6)
     minCorner.Parent = minBtn
-    minBtn.MouseButton1Click:Connect(function()
-        guiVisible = false
-        frame.Visible = false
-        showRecordingIndicator(isRecording)
-    end)
 
-    -- Tombol Close (X) - destroy GUI
+    -- Tombol Close
     local closeBtn = Instance.new("TextButton", titleBar)
     closeBtn.BackgroundColor3 = Color3.fromRGB(200,50,50)
     closeBtn.BorderSizePixel = 0
@@ -886,13 +915,16 @@ local function createGUI()
     local closeCorner = Instance.new("UICorner")
     closeCorner.CornerRadius = UDim.new(0,6)
     closeCorner.Parent = closeBtn
-    closeBtn.MouseButton1Click:Connect(function()
-        gui:Destroy()
-        guiFrame = nil
-    end)
 
+    -- Container untuk semua konten
+    local contentContainer = Instance.new("Frame", frame)
+    contentContainer.BackgroundTransparency = 1
+    contentContainer.Position = UDim2.new(0,0,0,36)
+    contentContainer.Size = UDim2.new(1,0,1,-36)
+    
+    -- ========== KOMPONEN GUI (Y diatur rapat dari 0) ==========
     local function mkBtn(x,y,w,h,text,r,g,b)
-        local btn = Instance.new("TextButton", frame)
+        local btn = Instance.new("TextButton", contentContainer)
         btn.BackgroundColor3 = Color3.fromRGB(r,g,b)
         btn.BorderSizePixel = 0
         btn.Position = UDim2.new(0,x,0,y)
@@ -908,7 +940,7 @@ local function createGUI()
     end
 
     local function mkDiv(y)
-        local d = Instance.new("Frame", frame)
+        local d = Instance.new("Frame", contentContainer)
         d.BackgroundColor3 = Color3.fromRGB(25,35,50)
         d.BorderSizePixel = 0
         d.Position = UDim2.new(0,12,0,y)
@@ -916,7 +948,7 @@ local function createGUI()
     end
 
     local function mkLbl(y,text)
-        local lbl = Instance.new("TextLabel", frame)
+        local lbl = Instance.new("TextLabel", contentContainer)
         lbl.BackgroundTransparency = 1
         lbl.Position = UDim2.new(0,12,0,y)
         lbl.Size = UDim2.new(1,-24,0,16)
@@ -927,13 +959,14 @@ local function createGUI()
         lbl.TextXAlignment = Enum.TextXAlignment.Left
     end
 
-    mkLbl(42, "REKAM")
-    local recBtn = mkBtn(12,60,132,32,"🔴 REC",170,35,35)
-    local stpBtn = mkBtn(152,60,136,32,"⏹ SAVE",25,130,70)
+    -- Mulai dari Y=0 (tanpa jarak)
+    mkLbl(0, "REKAM")
+    local recBtn = mkBtn(12,18,132,32,"🔴 REC",170,35,35)
+    local stpBtn = mkBtn(152,18,136,32,"⏹ SAVE",25,130,70)
 
-    local recStatus = Instance.new("TextLabel", frame)
+    local recStatus = Instance.new("TextLabel", contentContainer)
     recStatus.BackgroundTransparency = 1
-    recStatus.Position = UDim2.new(0,12,0,96)
+    recStatus.Position = UDim2.new(0,12,0,54)
     recStatus.Size = UDim2.new(1,-24,0,14)
     recStatus.Font = Enum.Font.Gotham
     recStatus.Text = "Siap | F = Record"
@@ -941,26 +974,26 @@ local function createGUI()
     recStatus.TextSize = 10
     recStatus.TextXAlignment = Enum.TextXAlignment.Left
 
-    mkDiv(112)
+    mkDiv(72)
 
-    mkLbl(118, "PLAYBACK")
-    local playStartBtn = mkBtn(12,134,86,30,"▶ START",25,155,85)
-    local playNearestBtn = mkBtn(104,134,86,30,"📍 NEAREST",0,130,70)
-    local pauseBtn = mkBtn(196,134,92,30,"⏸ PAUSE",180,120,20)
-    local stopBtn2 = mkBtn(12,170,86,30,"⏹ STOP",160,40,40)
-    local loopBtn = mkBtn(104,170,86,30,"🔁 LOOP: OFF",35,35,55)
-    local savePosBtn = mkBtn(12,208,86,26,"💾 Save Pos",30,100,30)
-    local loadPosBtn = mkBtn(104,208,86,26,"📂 Load Pos",30,80,120)
+    mkLbl(80, "PLAYBACK")
+    local playStartBtn = mkBtn(12,96,86,30,"▶ START",25,155,85)
+    local playNearestBtn = mkBtn(104,96,86,30,"📍 NEAREST",0,130,70)
+    local pauseBtn = mkBtn(196,96,92,30,"⏸ PAUSE",180,120,20)
+    local stopBtn2 = mkBtn(12,132,86,30,"⏹ STOP",160,40,40)
+    local loopBtn = mkBtn(104,132,86,30,"🔁 LOOP: OFF",35,35,55)
+    local savePosBtn = mkBtn(12,168,86,26,"💾 Save Pos",30,100,30)
+    local loadPosBtn = mkBtn(104,168,86,26,"📂 Load Pos",30,80,120)
 
-    mkDiv(245)
-    mkLbl(251, "REKAMAN")
-    local refreshBtn = mkBtn(208,249,80,20,"🔄",25,50,90)
+    mkDiv(200)
+    mkLbl(206, "REKAMAN")
+    local refreshBtn = mkBtn(208,204,80,20,"🔄",25,50,90)
 
-    local listFrame = Instance.new("ScrollingFrame", frame)
+    local listFrame = Instance.new("ScrollingFrame", contentContainer)
     listFrame.BackgroundColor3 = Color3.fromRGB(14,14,20)
     listFrame.BorderSizePixel = 0
-    listFrame.Position = UDim2.new(0,12,0,272)
-    listFrame.Size = UDim2.new(1,-24,0,156)
+    listFrame.Position = UDim2.new(0,12,0,228)
+    listFrame.Size = UDim2.new(1,-24,0,150)
     listFrame.ScrollBarThickness = 4
     listFrame.ScrollBarImageColor3 = Color3.fromRGB(0,160,230)
     listFrame.CanvasSize = UDim2.new(0,0,0,0)
@@ -977,14 +1010,14 @@ local function createGUI()
     lp2.PaddingLeft = UDim.new(0,6)
     lp2.PaddingRight = UDim.new(0,6)
 
-    mkDiv(438)
-    local mergeBtn = mkBtn(12,444,100,32,"🔗 MERGE & COMP",0,100,160)
+    mkDiv(388)
+    local mergeBtn = mkBtn(12,394,100,32,"🔗 MERGE & COMP",0,100,160)
 
-    notifLabel = Instance.new("TextLabel", frame)
+    notifLabel = Instance.new("TextLabel", contentContainer)
     notifLabel.BackgroundColor3 = Color3.fromRGB(0,80,150)
     notifLabel.BorderSizePixel = 0
-    notifLabel.Position = UDim2.new(0,12,0,490)
-    notifLabel.Size = UDim2.new(1,-24,0,40)
+    notifLabel.Position = UDim2.new(0,12,0,430)
+    notifLabel.Size = UDim2.new(1,-24,0,36)
     notifLabel.Font = Enum.Font.Gotham
     notifLabel.Text = ""
     notifLabel.TextColor3 = Color3.fromRGB(255,255,255)
@@ -995,6 +1028,7 @@ local function createGUI()
     notifCorner.CornerRadius = UDim.new(0,6)
     notifCorner.Parent = notifLabel
 
+    -- ========== LIST RECORD ==========
     local rowCache = {}
 
     local function getLayoutOrder(recName)
@@ -1096,6 +1130,7 @@ local function createGUI()
 
     updatePlaybackUI = function(playing) end
 
+    -- Update status text periodik
     task.spawn(function()
         while gui and gui.Parent do
             if isRecording then
@@ -1113,6 +1148,7 @@ local function createGUI()
         end
     end)
 
+    -- Event tombol
     recBtn.MouseButton1Click:Connect(startRecording)
     stpBtn.MouseButton1Click:Connect(function()
         if isRecording then stopRecording() end
@@ -1121,27 +1157,42 @@ local function createGUI()
             if saved then refreshRecords(); renderList() end
         end)
     end)
-
     playStartBtn.MouseButton1Click:Connect(startPlaybackFromStart)
     playNearestBtn.MouseButton1Click:Connect(startPlaybackFromNearest)
     pauseBtn.MouseButton1Click:Connect(pausePlayback)
     stopBtn2.MouseButton1Click:Connect(stopPlayback)
     savePosBtn.MouseButton1Click:Connect(savePosition)
     loadPosBtn.MouseButton1Click:Connect(loadPosition)
-
     loopBtn.MouseButton1Click:Connect(function()
         isLooping = not isLooping
         loopBtn.Text = isLooping and "🔁 LOOP: ON" or "🔁 LOOP: OFF"
         loopBtn.BackgroundColor3 = isLooping and Color3.fromRGB(0,120,65) or Color3.fromRGB(35,35,55)
     end)
-
     refreshBtn.MouseButton1Click:Connect(function()
         refreshRecords()
         renderList()
         notif("🔄 Direfresh", Color3.fromRGB(130,190,255),1.5)
     end)
-
     mergeBtn.MouseButton1Click:Connect(mergeAndCompressAll)
+
+    -- Minimize (collapse) logic
+    local function toggleCollapse()
+        if isCollapsed then
+            frame.Size = UDim2.new(0, W, 0, originalHeight)
+            contentContainer.Visible = true
+            minBtn.Text = "—"
+            isCollapsed = false
+        else
+            frame.Size = UDim2.new(0, W, 0, 36)
+            contentContainer.Visible = false
+            minBtn.Text = "□"
+            isCollapsed = true
+        end
+    end
+    minBtn.MouseButton1Click:Connect(toggleCollapse)
+
+    -- Close total
+    closeBtn.MouseButton1Click:Connect(cleanupAll)
 
     refreshRecords()
     renderList()
@@ -1166,10 +1217,10 @@ UserInputService.InputBegan:Connect(function(input, processed)
     if input.KeyCode == Enum.KeyCode.F then
         if isRecording then
             stopRecording()
-            if guiFrame then guiFrame.Visible = true; guiVisible = true end
+            if guiFrame then guiFrame.Visible = true end
         else
             startRecording()
-            if guiFrame then guiFrame.Visible = false; guiVisible = false end
+            if guiFrame then guiFrame.Visible = false end
         end
     end
 end)
