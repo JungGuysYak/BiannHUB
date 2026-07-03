@@ -1,5 +1,5 @@
 --[[
-    BIANNHUB RECORDER v2.5 (Notifikasi Terpisah - FIXED)
+    BIANNHUB RECORDER v3.8 (Notifikasi Atas Tengah - Kecil & Rapi)
 ]]
 
 repeat task.wait() until game:IsLoaded()
@@ -12,7 +12,7 @@ local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 local LP = Players.LocalPlayer
 
-local VERSION = "2.5"
+local VERSION = "3.8"
 local DATA_FOLDER = "BiannHUBRecords"
 local MIN_FRAMES = 5
 local WALK_VEL_THRESHOLD = 0.2
@@ -56,7 +56,7 @@ local guiFrame = nil
 local isCollapsed = false
 local originalHeight = 490
 
--- ==================== NOTIFIKASI TERPISAH ====================
+-- ==================== NOTIFIKASI ATAS TENGAH (KECIL & RAPI) ====================
 local notificationContainer = nil
 
 local function createNotificationContainer()
@@ -64,7 +64,6 @@ local function createNotificationContainer()
         return notificationContainer
     end
     
-    -- Hapus yang lama
     local old = LP.PlayerGui:FindFirstChild("BiannHUB_Notif")
     if old then old:Destroy() end
     
@@ -78,9 +77,8 @@ local function createNotificationContainer()
     notificationContainer = Instance.new("Frame", screenGui)
     notificationContainer.Name = "NotifContainer"
     notificationContainer.BackgroundTransparency = 1
-    notificationContainer.Size = UDim2.new(0, 400, 0, 250)
-    notificationContainer.Position = UDim2.new(0.5, -200, 0, 10)
-    notificationContainer.AnchorPoint = Vector2.new(0, 0)
+    notificationContainer.Size = UDim2.new(1, 0, 0, 80)
+    notificationContainer.Position = UDim2.new(0, 0, 0, 8)
     notificationContainer.ZIndex = 999
     
     return notificationContainer
@@ -91,122 +89,158 @@ local function showNotification(msg, color, duration)
         createNotificationContainer()
     end
     
-    -- Cek apakah notifikasi dengan pesan yang sama sudah ada
-    local existing = false
+    -- Hapus notifikasi lama
     for _, child in pairs(notificationContainer:GetChildren()) do
         if child:IsA("Frame") then
-            local text = child:FindFirstChildOfClass("TextLabel")
-            if text and text.Text == msg then
-                existing = true
-                break
-            end
+            child:Destroy()
         end
     end
-    if existing then return end
     
+    -- Main notif frame (atas tengah - kecil)
     local notifFrame = Instance.new("Frame", notificationContainer)
-    notifFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 18)
+    notifFrame.BackgroundColor3 = Color3.fromRGB(12, 12, 22)
     notifFrame.BorderSizePixel = 0
-    notifFrame.Size = UDim2.new(1, 0, 0, 42)
-    notifFrame.Position = UDim2.new(0, 0, 0, -50)
+    notifFrame.Size = UDim2.new(0, 320, 0, 38)
+    notifFrame.Position = UDim2.new(0.5, -160, 0, -50)
     notifFrame.BackgroundTransparency = 1
-    notifFrame.ZIndex = 1000
+    notifFrame.ZIndex = 1001
+    notifFrame.ClipsDescendants = true
+    notifFrame.AnchorPoint = Vector2.new(0, 0)
     
-    local stroke = Instance.new("UIStroke", notifFrame)
+    -- Shadow
+    local shadow = Instance.new("Frame", notifFrame)
+    shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.BackgroundTransparency = 0.4
+    shadow.BorderSizePixel = 0
+    shadow.Position = UDim2.new(0, 2, 0, 2)
+    shadow.Size = UDim2.new(1, -4, 1, 0)
+    shadow.ZIndex = 999
+    local shadowCorner = Instance.new("UICorner", shadow)
+    shadowCorner.CornerRadius = UDim.new(0, 8)
+    
+    -- Main frame
+    local mainFrame = Instance.new("Frame", notifFrame)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 34)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Size = UDim2.new(1, 0, 1, 0)
+    mainFrame.ZIndex = 1000
+    local mainCorner = Instance.new("UICorner", mainFrame)
+    mainCorner.CornerRadius = UDim.new(0, 8)
+    
+    -- Border glow (tipis)
+    local stroke = Instance.new("UIStroke", mainFrame)
     stroke.Color = color or Color3.fromRGB(0, 180, 255)
-    stroke.Thickness = 1.5
-    stroke.Transparency = 1
+    stroke.Thickness = 1
+    stroke.Transparency = 0.2
     
-    local corner = Instance.new("UICorner", notifFrame)
-    corner.CornerRadius = UDim.new(0, 8)
+    -- Garis warna atas (tipis)
+    local topBar = Instance.new("Frame", mainFrame)
+    topBar.BackgroundColor3 = color or Color3.fromRGB(0, 180, 255)
+    topBar.BorderSizePixel = 0
+    topBar.Position = UDim2.new(0, 0, 0, 0)
+    topBar.Size = UDim2.new(1, 0, 0, 2)
+    topBar.ZIndex = 1002
     
-    local icon = Instance.new("TextLabel", notifFrame)
+    -- Icon kecil di kiri
+    local iconText = "📌"
+    if string.find(msg, "Anti-AFK") and string.find(msg, "ON") then iconText = "🛡️"
+    elseif string.find(msg, "Anti-AFK") and string.find(msg, "OFF") then iconText = "🔓"
+    elseif string.find(msg, "Merekam") then iconText = "🔴"
+    elseif string.find(msg, "tersimpan") then iconText = "💾"
+    elseif string.find(msg, "Playback") and string.find(msg, "berhenti") then iconText = "⏹️"
+    elseif string.find(msg, "Pause") then iconText = "⏸️"
+    elseif string.find(msg, "Resume") then iconText = "▶️"
+    elseif string.find(msg, "Selesai") then iconText = "✅"
+    elseif string.find(msg, "Gagal") then iconText = "X"
+    elseif string.find(msg, "Dihapus") then iconText = "🗑️"
+    elseif string.find(msg, "Posisi") and string.find(msg, "tersimpan") then iconText = "📍"
+    elseif string.find(msg, "Posisi") and string.find(msg, "dimuat") then iconText = "📂"
+    elseif string.find(msg, "Loop") and string.find(msg, "diaktifkan") then iconText = "🔄"
+    elseif string.find(msg, "Loop") and string.find(msg, "dinonaktifkan") then iconText = "⏹️"
+    elseif string.find(msg, "Merge") then iconText = "🔗"
+    elseif string.find(msg, "Direfresh") then iconText = "🔄"
+    end
+    
+    local icon = Instance.new("TextLabel", mainFrame)
     icon.BackgroundTransparency = 1
-    icon.Position = UDim2.new(0, 8, 0.5, -10)
-    icon.Size = UDim2.new(0, 24, 0, 24)
+    icon.Position = UDim2.new(0, 10, 0.5, -10)
+    icon.Size = UDim2.new(0, 20, 0, 20)
     icon.Font = Enum.Font.GothamBold
-    icon.Text = string.sub(msg, 1, 2)
+    icon.Text = iconText
     icon.TextColor3 = color or Color3.fromRGB(0, 180, 255)
     icon.TextSize = 14
     icon.TextXAlignment = Enum.TextXAlignment.Center
     icon.TextYAlignment = Enum.TextYAlignment.Center
     icon.ZIndex = 1001
     
-    local text = Instance.new("TextLabel", notifFrame)
+    -- TEXT (kecil)
+    local text = Instance.new("TextLabel", mainFrame)
+    text.Name = "Text"
     text.BackgroundTransparency = 1
-    text.Position = UDim2.new(0, 38, 0.5, -10)
-    text.Size = UDim2.new(1, -48, 1, 0)
-    text.Font = Enum.Font.GothamBold
+    text.Position = UDim2.new(0, 36, 0.5, -9)
+    text.Size = UDim2.new(1, -70, 1, 0)
+    text.Font = Enum.Font.GothamSemibold
     text.Text = msg
-    text.TextColor3 = Color3.fromRGB(255, 255, 255)
+    text.TextColor3 = Color3.fromRGB(235, 235, 245)
     text.TextSize = 12
     text.TextXAlignment = Enum.TextXAlignment.Left
     text.TextYAlignment = Enum.TextYAlignment.Center
     text.TextTruncate = Enum.TextTruncate.AtEnd
     text.ZIndex = 1001
     
-    local closeBtn = Instance.new("TextButton", notifFrame)
+    -- Tombol close (kecil)
+    local closeBtn = Instance.new("TextButton", mainFrame)
     closeBtn.BackgroundTransparency = 1
     closeBtn.Position = UDim2.new(1, -28, 0.5, -10)
     closeBtn.Size = UDim2.new(0, 20, 0, 20)
     closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.Text = "✖"
-    closeBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
-    closeBtn.TextSize = 12
+    closeBtn.Text = "X"
+    closeBtn.TextColor3 = Color3.fromRGB(100, 100, 120)
+    closeBtn.TextSize = 10
     closeBtn.TextXAlignment = Enum.TextXAlignment.Center
     closeBtn.TextYAlignment = Enum.TextYAlignment.Center
     closeBtn.ZIndex = 1002
+    closeBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    closeBtn.BackgroundTransparency = 0.3
+    local closeCorner = Instance.new("UICorner", closeBtn)
+    closeCorner.CornerRadius = UDim.new(0, 4)
     closeBtn.MouseButton1Click:Connect(function()
         notifFrame:Destroy()
+    end)
+    closeBtn.MouseEnter:Connect(function()
+        closeBtn.BackgroundColor3 = Color3.fromRGB(60, 25, 25)
+        closeBtn.BackgroundTransparency = 0.4
+        closeBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
+    end)
+    closeBtn.MouseLeave:Connect(function()
+        closeBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+        closeBtn.BackgroundTransparency = 0.3
+        closeBtn.TextColor3 = Color3.fromRGB(100, 100, 120)
     end)
     
     notifFrame.Visible = true
     
-    local tweenIn = TweenService:Create(notifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Position = UDim2.new(0, 0, 0, 0),
+    -- Animasi masuk (dari atas)
+    local tweenIn = TweenService:Create(notifFrame, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0.2), {
+        Position = UDim2.new(0.5, -160, 0, 0),
         BackgroundTransparency = 0,
     })
-    
-    local tweenStroke = TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-        Transparency = 0,
-    })
-    
     tweenIn:Play()
-    tweenStroke:Play()
     
-    -- Hapus notifikasi setelah durasi
+    -- Auto hilang
     task.delay(duration or 3, function()
         if not notifFrame or not notifFrame.Parent then return end
-        local tweenOut = TweenService:Create(notifFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Position = UDim2.new(0, 0, 0, -50),
+        local tweenOut = TweenService:Create(notifFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Position = UDim2.new(0.5, -160, 0, -50),
             BackgroundTransparency = 1,
         })
-        local tweenStrokeOut = TweenService:Create(stroke, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-            Transparency = 1,
-        })
         tweenOut:Play()
-        tweenStrokeOut:Play()
-        task.delay(0.4, function()
+        task.delay(0.3, function()
             if notifFrame and notifFrame.Parent then
                 notifFrame:Destroy()
             end
         end)
     end)
-    
-    -- Update posisi notifikasi yang ada
-    task.wait(0.1)
-    local children = notificationContainer:GetChildren()
-    local yOffset = 0
-    for i = #children, 1, -1 do
-        local child = children[i]
-        if child:IsA("Frame") and child ~= notifFrame and child.Visible then
-            yOffset = yOffset + 46
-            local newPos = UDim2.new(0, 0, 0, yOffset)
-            TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                Position = newPos
-            }):Play()
-        end
-    end
 end
 
 -- ==================== ANTI-AFK ====================
@@ -279,15 +313,14 @@ local function startAntiAfk()
     end)
     
     if antiAfkBtn then
-        antiAfkBtn.Text = "🛡️ AFK: ON"
+        antiAfkBtn.Text = "AFK: ON"
         antiAfkBtn.BackgroundColor3 = Color3.fromRGB(0,120,65)
     end
     if recStatus then
-        recStatus.Text = string.gsub(recStatus.Text, "AFK: ❌ OFF", "AFK: ✅ ON")
-        recStatus.Text = string.gsub(recStatus.Text, "AFK: OFF", "AFK: ✅ ON")
+        recStatus.Text = string.gsub(recStatus.Text, "AFK: OFF", "AFK: ON")
     end
     
-    showNotification("🛡️ Anti-AFK ON (Bypass 20 menit)", Color3.fromRGB(100,255,100), 2)
+    showNotification("Anti-AFK ON (Bypass 20 menit)", Color3.fromRGB(100,255,100), 2.5)
 end
 
 local function stopAntiAfk()
@@ -298,15 +331,14 @@ local function stopAntiAfk()
     end
     
     if antiAfkBtn then
-        antiAfkBtn.Text = "🛡️ AFK: OFF"
+        antiAfkBtn.Text = "AFK: OFF"
         antiAfkBtn.BackgroundColor3 = Color3.fromRGB(0,80,60)
     end
     if recStatus then
-        recStatus.Text = string.gsub(recStatus.Text, "AFK: ✅ ON", "AFK: ❌ OFF")
-        recStatus.Text = string.gsub(recStatus.Text, "AFK: ON", "AFK: ❌ OFF")
+        recStatus.Text = string.gsub(recStatus.Text, "AFK: ON", "AFK: OFF")
     end
     
-    showNotification("🛡️ Anti-AFK OFF", Color3.fromRGB(255,100,100), 2)
+    showNotification("Anti-AFK OFF", Color3.fromRGB(255,100,100), 2.5)
 end
 
 local function toggleAntiAfk()
@@ -348,7 +380,7 @@ end
 -- ==================== RECORDING ====================
 local function stopRecording()
     if not isRecording then
-        showNotification("❌ Tidak sedang merekam", Color3.fromRGB(255,100,100))
+        showNotification("Tidak sedang merekam", Color3.fromRGB(255,100,100))
         return
     end
     isRecording = false
@@ -362,7 +394,7 @@ local function stopRecording()
     end
 
     if #recordedFrames < MIN_FRAMES then
-        showNotification(string.format("❌ Rekaman terlalu pendek (%d frame)", #recordedFrames), Color3.fromRGB(255,100,100))
+        showNotification(string.format("Rekaman terlalu pendek (%d frame)", #recordedFrames), Color3.fromRGB(255,100,100))
         recordedFrames = {}
         pendingFrames = nil
         return
@@ -393,7 +425,7 @@ local function stopRecording()
     end
 
     if #trimmed < MIN_FRAMES then
-        showNotification("❌ Rekaman terlalu pendek setelah trim", Color3.fromRGB(255,100,100))
+        showNotification("Rekaman terlalu pendek setelah trim", Color3.fromRGB(255,100,100))
         recordedFrames = {}
         pendingFrames = nil
         return
@@ -401,7 +433,7 @@ local function stopRecording()
 
     pendingFrames = trimmed
     recordedFrames = {}
-    showNotification(string.format("⏹ %d frame (%.1fs) — siap save", #pendingFrames, pendingFrames[#pendingFrames].time), Color3.fromRGB(255,200,50))
+    showNotification(string.format("%d frame (%.1fs) — Siap save", #pendingFrames, pendingFrames[#pendingFrames].time), Color3.fromRGB(255,200,50))
 end
 
 local function createRecordingIndicator()
@@ -491,14 +523,16 @@ local function getNextCheckpointNum()
 end
 
 local function startRecording()
-    if isPlaying then
-        showNotification("❌ Hentikan playback dulu", Color3.fromRGB(255,100,100))
+    if isRecording then
+        showNotification("Sudah merekam", Color3.fromRGB(255,200,50))
         return
     end
-    if isRecording then
-        if recordHB then recordHB:Disconnect(); recordHB = nil end
-        isRecording = false
+    
+    if isPlaying then
+        showNotification("Hentikan playback dulu", Color3.fromRGB(255,100,100))
+        return
     end
+    
     pendingFrames = nil
     recordedFrames = {}
     recordStartTime = tick()
@@ -508,7 +542,7 @@ local function startRecording()
     showRecordingIndicator(true)
 
     local lastRecTick = tick()
-    showNotification("🔴 Merekam...", Color3.fromRGB(255,80,80))
+    showNotification("Merekam...", Color3.fromRGB(255,80,80))
 
     if recordHB then recordHB:Disconnect() end
     recordHB = RunService.Heartbeat:Connect(function()
@@ -557,11 +591,11 @@ end
 
 local function saveRecording()
     if isSaving then
-        showNotification("⚠️ Sedang menyimpan...", Color3.fromRGB(255,200,50))
+        showNotification("Sedang menyimpan...", Color3.fromRGB(255,200,50))
         return nil
     end
     if not pendingFrames or #pendingFrames == 0 then
-        showNotification("❌ Tidak ada rekaman", Color3.fromRGB(255,100,100))
+        showNotification("Tidak ada rekaman", Color3.fromRGB(255,100,100))
         return nil
     end
     isSaving = true
@@ -580,12 +614,12 @@ local function saveRecording()
         writefile(fileName, HttpService:JSONEncode(data))
     end)
     if ok then
-        showNotification(string.format("💾 %s (%d frame)", name, #pendingFrames), Color3.fromRGB(100,255,150))
+        showNotification(string.format("%s (%d frame) tersimpan", name, #pendingFrames), Color3.fromRGB(100,255,150))
         pendingFrames = nil
         isSaving = false
         return name
     else
-        showNotification("❌ Gagal: "..tostring(err), Color3.fromRGB(255,100,100))
+        showNotification("Gagal: "..tostring(err), Color3.fromRGB(255,100,100))
         isSaving = false
         return nil
     end
@@ -606,17 +640,41 @@ local function loadRecord(name)
     currentData = data
     currentFrames = data.frames
     selectedRecord = name
-    showNotification(string.format("📂 %s (%d frame)", name, data.totalFrames or 0), Color3.fromRGB(100,180,255))
+    showNotification(string.format("%s (%d frame) dimuat", name, data.totalFrames or 0), Color3.fromRGB(100,180,255))
     return true
 end
 
 local function deleteRecord(name)
     local filePath = getRecordFilePath(name)
-    if not filePath then return false end
-    delfile(filePath)
-    if currentData and currentData.name == name then currentData = nil end
-    if selectedRecord == name then selectedRecord = nil end
-    showNotification("🗑️ Dihapus: "..name, Color3.fromRGB(255,160,60))
+    if not filePath then 
+        showNotification("File tidak ditemukan", Color3.fromRGB(255,200,50))
+        return false 
+    end
+    
+    local success, err = pcall(function()
+        delfile(filePath)
+    end)
+    
+    if not success then
+        showNotification("Gagal hapus: "..tostring(err), Color3.fromRGB(255,100,100))
+        return false
+    end
+    
+    for i = #savedRecords, 1, -1 do
+        if savedRecords[i] == name then
+            table.remove(savedRecords, i)
+            break
+        end
+    end
+    
+    if currentData and currentData.name == name then 
+        currentData = nil 
+    end
+    if selectedRecord == name then 
+        selectedRecord = nil 
+    end
+    
+    showNotification("Dihapus: "..name, Color3.fromRGB(255,160,60))
     return true
 end
 
@@ -637,7 +695,9 @@ local function refreshRecords()
         for _, file in ipairs(listfiles(DATA_FOLDER)) do
             if file:find("%.json$") then
                 local name = file:match("([^/\\]+)%.json$")
-                if name then table.insert(savedRecords, name) end
+                if name then 
+                    table.insert(savedRecords, name) 
+                end
             end
         end
     end
@@ -733,7 +793,7 @@ local function stopPlayback()
         hum:ChangeState(Enum.HumanoidStateType.Running)
     end
     playbackTime = 0
-    showNotification("⏹️ Playback berhenti", Color3.fromRGB(200,200,200))
+    showNotification("Playback berhenti", Color3.fromRGB(200,200,200))
     if updatePlaybackUI then updatePlaybackUI(false) end
 end
 
@@ -743,19 +803,19 @@ local function pausePlayback()
     if not isPaused then
         playbackStartTime = tick() - playbackTime
     end
-    showNotification(isPaused and "⏸️ Pause" or "▶️ Resume", Color3.fromRGB(255,180,60))
+    showNotification(isPaused and "Pause" or "Resume", Color3.fromRGB(255,180,60))
 end
 
 local function startPlaybackFromTime(startTime)
     if not currentData or not currentFrames then
-        showNotification("❌ Pilih rekaman dulu", Color3.fromRGB(255,100,100))
+        showNotification("Pilih rekaman dulu", Color3.fromRGB(255,100,100))
         return false
     end
     
     local hrp = getHRP()
     local hum = getHum()
     if not hrp or not hum then
-        showNotification("❌ Character tidak siap", Color3.fromRGB(255,100,100))
+        showNotification("Character tidak siap", Color3.fromRGB(255,100,100))
         return false
     end
     
@@ -766,7 +826,7 @@ local function startPlaybackFromTime(startTime)
     
     local frames = getCompressedFrames(currentFrames)
     if #frames < 2 then
-        showNotification("❌ Rekaman terlalu pendek setelah kompresi", Color3.fromRGB(255,100,100))
+        showNotification("Rekaman terlalu pendek setelah kompresi", Color3.fromRGB(255,100,100))
         return false
     end
     
@@ -816,10 +876,10 @@ local function startPlaybackFromTime(startTime)
                 newPlaybackTime = 0
                 playbackStartTime = now
                 playbackTime = 0
-                showNotification("🔄 Loop", Color3.fromRGB(150,220,255), 1)
+                showNotification("Loop aktif", Color3.fromRGB(150,220,255), 1.5)
             else
                 stopPlayback()
-                showNotification("✅ Selesai", Color3.fromRGB(100,255,150))
+                showNotification("Playback selesai", Color3.fromRGB(100,255,150))
                 return
             end
         end
@@ -875,14 +935,14 @@ local function startPlaybackFromTime(startTime)
         lastVelocity = newVel
     end)
     
-    showNotification(string.format("▶️ %s (dari %.1fs)", currentData.name, playbackTime), Color3.fromRGB(100,255,150))
+    showNotification(string.format("%s (dari %.1fs)", currentData.name, playbackTime), Color3.fromRGB(100,255,150))
     if updatePlaybackUI then updatePlaybackUI(true) end
     return true
 end
 
 local function startPlaybackFromStart()
     if not currentData or not currentFrames then
-        showNotification("❌ Pilih rekaman dulu", Color3.fromRGB(255,100,100))
+        showNotification("Pilih rekaman dulu", Color3.fromRGB(255,100,100))
         return false
     end
     return startPlaybackFromTime(0)
@@ -890,18 +950,18 @@ end
 
 local function startPlaybackFromNearest()
     if not currentData or not currentFrames then
-        showNotification("❌ Pilih rekaman dulu", Color3.fromRGB(255,100,100))
+        showNotification("Pilih rekaman dulu", Color3.fromRGB(255,100,100))
         return false
     end
     local hrp = getHRP()
     if not hrp then
-        showNotification("❌ Character tidak siap", Color3.fromRGB(255,100,100))
+        showNotification("Character tidak siap", Color3.fromRGB(255,100,100))
         return false
     end
     local currentPos = hrp.Position
     local nearestIdx, nearestDist = findNearestFrameIndex(currentFrames, currentPos)
     local startTime = currentFrames[nearestIdx].time
-    showNotification(string.format("📍 Nearest: frame %d (jarak %.1f)", nearestIdx, nearestDist), Color3.fromRGB(100,255,150), 2.5)
+    showNotification(string.format("Nearest: frame %d (jarak %.1f)", nearestIdx, nearestDist), Color3.fromRGB(100,255,150), 2.5)
     return startPlaybackFromTime(startTime)
 end
 
@@ -910,9 +970,9 @@ local function savePosition()
     local hrp = getHRP()
     if hrp then
         savedPosition = hrp.CFrame
-        showNotification("💾 Posisi tersimpan", Color3.fromRGB(100,255,100))
+        showNotification("Posisi tersimpan", Color3.fromRGB(100,255,100))
     else
-        showNotification("❌ Character tidak siap", Color3.fromRGB(255,100,100))
+        showNotification("Character tidak siap", Color3.fromRGB(255,100,100))
     end
 end
 
@@ -926,12 +986,12 @@ local function loadPosition()
             hrp.AssemblyAngularVelocity = Vector3.zero
             hum.AutoRotate = true
             hum:ChangeState(Enum.HumanoidStateType.Running)
-            showNotification("📂 Posisi dimuat", Color3.fromRGB(100,200,255))
+            showNotification("Posisi dimuat", Color3.fromRGB(100,200,255))
         else
-            showNotification("❌ Character tidak siap", Color3.fromRGB(255,100,100))
+            showNotification("Character tidak siap", Color3.fromRGB(255,100,100))
         end
     else
-        showNotification("❌ Belum ada posisi tersimpan", Color3.fromRGB(255,100,100))
+        showNotification("Belum ada posisi tersimpan", Color3.fromRGB(255,100,100))
     end
 end
 
@@ -945,8 +1005,8 @@ local function mergeAndCompressAll()
         end
     end
     if #toMerge < 2 then
-        showNotification("❌ Minimal 2 Checkpoint", Color3.fromRGB(255,100,100))
-        return
+        showNotification("Minimal 2 Checkpoint", Color3.fromRGB(255,100,100))
+        return nil
     end
 
     local cpDataList = {}
@@ -961,8 +1021,8 @@ local function mergeAndCompressAll()
     end
 
     if #cpDataList < 2 then
-        showNotification("❌ Minimal 2 CP valid", Color3.fromRGB(255,100,100))
-        return
+        showNotification("Minimal 2 CP valid", Color3.fromRGB(255,100,100))
+        return nil
     end
 
     local allRawFrames = {}
@@ -984,8 +1044,8 @@ local function mergeAndCompressAll()
     end
 
     if #allRawFrames < 2 then
-        showNotification("❌ Tidak cukup frame", Color3.fromRGB(255,100,100))
-        return
+        showNotification("Tidak cukup frame", Color3.fromRGB(255,100,100))
+        return nil
     end
 
     local mergedFrames = {}
@@ -1029,11 +1089,11 @@ local function mergeAndCompressAll()
     }
     local ok, err = pcall(function() writefile(outFile, HttpService:JSONEncode(outData)) end)
     if ok then
-        showNotification(string.format("🔗 Merge: %d CP, %d frame", #cpDataList, #mergedFrames), Color3.fromRGB(100,255,150))
-        refreshRecords()
-        if renderList then renderList() end
+        showNotification(string.format("Merge: %d CP, %d frame", #cpDataList, #mergedFrames), Color3.fromRGB(100,255,150))
+        return outName
     else
-        showNotification("❌ Gagal: "..tostring(err), Color3.fromRGB(255,100,100))
+        showNotification("Gagal: "..tostring(err), Color3.fromRGB(255,100,100))
+        return nil
     end
 end
 
@@ -1075,6 +1135,20 @@ local function cleanupAll()
     guiFrame = nil
     notificationContainer = nil
 end
+
+-- ==================== KEYBIND F ====================
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.F then
+        if isRecording then
+            stopRecording()
+            if guiFrame then guiFrame.Visible = true end
+        else
+            startRecording()
+            if guiFrame then guiFrame.Visible = false end
+        end
+    end
+end)
 
 -- ==================== GUI ====================
 local function createGUI()
@@ -1119,7 +1193,7 @@ local function createGUI()
     titleLbl.Position = UDim2.new(0,12,0,0)
     titleLbl.Size = UDim2.new(1,-80,1,0)
     titleLbl.Font = Enum.Font.GothamBold
-    titleLbl.Text = "📼 BiannHUB REC v2.5"
+    titleLbl.Text = "🎬 BiannHUB REC V2"
     titleLbl.TextColor3 = Color3.fromRGB(255,255,255)
     titleLbl.TextSize = 12
     titleLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -1130,7 +1204,7 @@ local function createGUI()
     minBtn.Position = UDim2.new(1,-62,0,6)
     minBtn.Size = UDim2.new(0,24,0,24)
     minBtn.Font = Enum.Font.GothamBold
-    minBtn.Text = "—"
+    minBtn.Text = "-"
     minBtn.TextColor3 = Color3.fromRGB(255,255,255)
     minBtn.TextSize = 16
     local minCorner = Instance.new("UICorner")
@@ -1143,7 +1217,7 @@ local function createGUI()
     closeBtn.Position = UDim2.new(1,-32,0,6)
     closeBtn.Size = UDim2.new(0,24,0,24)
     closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.Text = "✕"
+    closeBtn.Text = "X"
     closeBtn.TextColor3 = Color3.fromRGB(255,255,255)
     closeBtn.TextSize = 12
     local closeCorner = Instance.new("UICorner")
@@ -1192,15 +1266,15 @@ local function createGUI()
     end
 
     mkLbl(0, "REKAM")
-    local recBtn = mkBtn(12,18,132,32,"🔴 REC",170,35,35)
-    local stpBtn = mkBtn(152,18,136,32,"⏹ SAVE",25,130,70)
+    local recBtn = mkBtn(12,18,132,32,"REC",170,35,35)
+    local stpBtn = mkBtn(152,18,136,32,"SAVE",25,130,70)
 
     recStatus = Instance.new("TextLabel", contentContainer)
     recStatus.BackgroundTransparency = 1
     recStatus.Position = UDim2.new(0,12,0,54)
     recStatus.Size = UDim2.new(1,-24,0,14)
     recStatus.Font = Enum.Font.Gotham
-    recStatus.Text = "Siap | F = Record | AFK: ❌ OFF"
+    recStatus.Text = "Siap | F = Record | AFK: OFF"
     recStatus.TextColor3 = Color3.fromRGB(100,255,150)
     recStatus.TextSize = 10
     recStatus.TextXAlignment = Enum.TextXAlignment.Left
@@ -1208,17 +1282,17 @@ local function createGUI()
     mkDiv(72)
 
     mkLbl(80, "PLAYBACK")
-    local playStartBtn = mkBtn(12,96,86,30,"▶ START",25,155,85)
-    local playNearestBtn = mkBtn(104,96,86,30,"📍 NEAREST",0,130,70)
-    local pauseBtn = mkBtn(196,96,92,30,"⏸ PAUSE",180,120,20)
-    local stopBtn2 = mkBtn(12,132,86,30,"⏹ STOP",160,40,40)
-    local loopBtn = mkBtn(104,132,86,30,"🔁 LOOP: OFF",35,35,55)
-    local savePosBtn = mkBtn(12,168,86,26,"💾 Save Pos",30,100,30)
-    local loadPosBtn = mkBtn(104,168,86,26,"📂 Load Pos",30,80,120)
+    local playStartBtn = mkBtn(12,96,86,30,"START",25,155,85)
+    local playNearestBtn = mkBtn(104,96,86,30,"NEAREST",0,130,70)
+    local pauseBtn = mkBtn(196,96,92,30,"PAUSE",180,120,20)
+    local stopBtn2 = mkBtn(12,132,86,30,"STOP",160,40,40)
+    local loopBtn = mkBtn(104,132,86,30,"LOOP: OFF",35,35,55)
+    local savePosBtn = mkBtn(12,168,86,26,"Save Pos",30,100,30)
+    local loadPosBtn = mkBtn(104,168,86,26,"Load Pos",30,80,120)
 
     mkDiv(200)
     mkLbl(206, "REKAMAN")
-    local refreshBtn = mkBtn(208,204,80,20,"🔄",25,50,90)
+    local refreshBtn = mkBtn(208,204,80,20,"REFRESH",25,50,90)
 
     local listFrame = Instance.new("ScrollingFrame", contentContainer)
     listFrame.BackgroundColor3 = Color3.fromRGB(14,14,20)
@@ -1243,7 +1317,7 @@ local function createGUI()
 
     mkDiv(388)
     
-    local mergeBtn = mkBtn(12,394,136,32,"🔗 MERGE",0,100,160)
+    local mergeBtn = mkBtn(12,394,136,32,"MERGE",0,100,160)
     
     antiAfkBtn = Instance.new("TextButton", contentContainer)
     antiAfkBtn.BackgroundColor3 = Color3.fromRGB(0,80,60)
@@ -1251,7 +1325,7 @@ local function createGUI()
     antiAfkBtn.Position = UDim2.new(0,154,0,394)
     antiAfkBtn.Size = UDim2.new(0,134,0,32)
     antiAfkBtn.Font = Enum.Font.GothamBold
-    antiAfkBtn.Text = "🛡️ AFK: OFF"
+    antiAfkBtn.Text = "AFK: OFF"
     antiAfkBtn.TextColor3 = Color3.fromRGB(255,255,255)
     antiAfkBtn.TextSize = 11
     local afkCorner = Instance.new("UICorner")
@@ -1261,8 +1335,6 @@ local function createGUI()
     antiAfkBtn.MouseButton1Click:Connect(function()
         toggleAntiAfk()
     end)
-
-    -- HAPUS notifLabel dari UI - NOTIFIKASI SEKARANG TERPISAH
 
     local rowCache = {}
 
@@ -1332,25 +1404,27 @@ local function createGUI()
         db.Position = UDim2.new(1,-28,0,4)
         db.Size = UDim2.new(0,22,0,24)
         db.Font = Enum.Font.GothamBold
-        db.Text = "🗑"
+        db.Text = "X"
         db.TextSize = 11
         db.TextColor3 = Color3.fromRGB(255,255,255)
         local dbCorner = Instance.new("UICorner")
         dbCorner.CornerRadius = UDim.new(0,4)
         dbCorner.Parent = db
         db.MouseButton1Click:Connect(function()
-            row:Destroy()
-            rowCache[recName] = nil
-            if selectedRecord == recName then selectedRecord = nil end
-            local hasRows = false
-            for _,c in pairs(listFrame:GetChildren()) do
-                if c:IsA("Frame") then hasRows = true; break end
+            local recNameToDelete = recName
+            
+            local success = deleteRecord(recNameToDelete)
+            
+            if success then
+                row:Destroy()
+                rowCache[recNameToDelete] = nil
+                if selectedRecord == recNameToDelete then 
+                    selectedRecord = nil 
+                end
+                
+                refreshRecords()
+                renderList()
             end
-            if not hasRows then addEmptyLabel() end
-            task.spawn(function()
-                deleteRecord(recName)
-                for i,n in ipairs(savedRecords) do if n == recName then table.remove(savedRecords,i); break end end
-            end)
         end)
     end
 
@@ -1368,19 +1442,19 @@ local function createGUI()
     task.spawn(function()
         while gui and gui.Parent do
             if isRecording then
-                recStatus.Text = string.format("🔴 %d frame  |  %.1fs | AFK: %s", 
+                recStatus.Text = string.format("REC %d frame  |  %.1fs | AFK: %s", 
                     #recordedFrames, tick()-recordStartTime,
-                    ANTI_AFK_ENABLED and "✅ ON" or "❌ OFF")
+                    ANTI_AFK_ENABLED and "ON" or "OFF")
                 recStatus.TextColor3 = Color3.fromRGB(255,90,90)
             elseif isPlaying and currentData then
                 local pct = math.floor(playbackTime / (currentData.duration or 1) * 100)
                 recStatus.Text = string.format("▶ %.1fs / %.1fs  (%d%%) | AFK: %s", 
                     playbackTime, currentData.duration or 0, pct,
-                    ANTI_AFK_ENABLED and "✅ ON" or "❌ OFF")
+                    ANTI_AFK_ENABLED and "ON" or "OFF")
                 recStatus.TextColor3 = Color3.fromRGB(80,220,130)
             else
-                recStatus.Text = string.format("✅ Siap | F = Record | AFK: %s",
-                    ANTI_AFK_ENABLED and "✅ ON" or "❌ OFF")
+                recStatus.Text = string.format("Siap | F = Record | AFK: %s",
+                    ANTI_AFK_ENABLED and "ON" or "OFF")
                 recStatus.TextColor3 = Color3.fromRGB(100,255,150)
             end
             task.wait(0.2)
@@ -1392,7 +1466,10 @@ local function createGUI()
         if isRecording then stopRecording() end
         task.defer(function()
             local saved = saveRecording()
-            if saved then refreshRecords(); renderList() end
+            if saved then
+                refreshRecords()
+                renderList()
+            end
         end)
     end)
     playStartBtn.MouseButton1Click:Connect(startPlaybackFromStart)
@@ -1403,15 +1480,23 @@ local function createGUI()
     loadPosBtn.MouseButton1Click:Connect(loadPosition)
     loopBtn.MouseButton1Click:Connect(function()
         isLooping = not isLooping
-        loopBtn.Text = isLooping and "🔁 LOOP: ON" or "🔁 LOOP: OFF"
+        loopBtn.Text = isLooping and "LOOP: ON" or "LOOP: OFF"
         loopBtn.BackgroundColor3 = isLooping and Color3.fromRGB(0,120,65) or Color3.fromRGB(35,35,55)
+        showNotification(isLooping and "Loop diaktifkan" or "Loop dinonaktifkan", 
+            isLooping and Color3.fromRGB(150,220,255) or Color3.fromRGB(200,200,200), 1.5)
     end)
     refreshBtn.MouseButton1Click:Connect(function()
         refreshRecords()
         renderList()
-        showNotification("🔄 Direfresh", Color3.fromRGB(130,190,255),1.5)
+        showNotification("Direfresh", Color3.fromRGB(130,190,255),1.5)
     end)
-    mergeBtn.MouseButton1Click:Connect(mergeAndCompressAll)
+    mergeBtn.MouseButton1Click:Connect(function()
+        local merged = mergeAndCompressAll()
+        if merged then
+            refreshRecords()
+            renderList()
+        end
+    end)
 
     local function toggleCollapse()
         if isCollapsed then
@@ -1439,15 +1524,9 @@ createGUI()
 refreshRecords()
 showRecordingIndicator(false)
 
--- Buat container notifikasi TERPISAH
+-- Buat container notifikasi
 createNotificationContainer()
 
 -- Auto-start Anti-AFK
 task.wait(2)
 startAntiAfk()
-
-print("✅ BiannHUB Recorder v2.5 siap pakai!")
-print("🛡️ Anti-AFK 20 Menit: AKTIF")
-print("📌 Tekan F untuk mulai/stop rekam")
-print("📢 Notifikasi muncul di pojok layar (TERPISAH dari UI)")
-print("❌ Tidak ada notifikasi di dalam UI utama")
